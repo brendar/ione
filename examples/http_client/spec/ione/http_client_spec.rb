@@ -5,6 +5,7 @@ require 'webrick/https'
 require 'net/https'
 require 'logger'
 require 'ione/http_client'
+require 'fileutils'
 
 
 module Ione
@@ -91,11 +92,15 @@ module Ione
         'http'
       end
 
+      let :log_file do
+        HttpClientSpec.log_file('http_server.log')
+      end
+
       let :server do
         WEBrick::HTTPServer.new(
           :Port => port,
-          :Logger => Logger.new(File.open('/dev/null', 'w')),
-          :AccessLog => File.open('/dev/null', 'w')
+          :Logger => Logger.new(log_file),
+          :AccessLog => [[log_file, WEBrick::AccessLog::COMBINED_LOG_FORMAT]]
         )
       end
 
@@ -137,6 +142,10 @@ module Ione
         s
       end
 
+      let :log_file do
+        HttpClientSpec.log_file('https_server.log')
+      end
+
       let :server do
         WEBrick::HTTPServer.new(
           :Port => port,
@@ -144,8 +153,8 @@ module Ione
           :SSLCertificate => cert,
           :SSLPrivateKey => key,
           :SSLTmpDhCallback => proc { HttpClientSpec::DH_PARAMS },
-          :Logger => Logger.new(File.open('/dev/null', 'w')),
-          :AccessLog => File.open('/dev/null', 'w')
+          :Logger => Logger.new(log_file),
+          :AccessLog => [[log_file, WEBrick::AccessLog::COMBINED_LOG_FORMAT]]
         )
       end
 
@@ -156,6 +165,7 @@ end
 
 module HttpClientSpec
   DH_PARAMS = OpenSSL::PKey::DH.new(File.read(File.expand_path('../../../../../spec/resources/dh.pem', __FILE__)))
+  SERVER_LOG_DIR = File.expand_path('../../../../../log/http_client_spec', __FILE__)
 
   class Servlet < WEBrick::HTTPServlet::AbstractServlet
     def do_GET(request, response)
@@ -182,7 +192,7 @@ module HttpClientSpec
   end
 
   def self.create_root_ca(cn)
-    key = OpenSSL::PKey::RSA.new(1024)
+    key = OpenSSL::PKey::RSA.new(2048)
     root_ca = OpenSSL::X509::Certificate.new
     root_ca.version = 2
     root_ca.serial = 1
@@ -203,7 +213,7 @@ module HttpClientSpec
   end
 
   def self.create_cert(root_ca, root_key, subject)
-    key = OpenSSL::PKey::RSA.new(1024)
+    key = OpenSSL::PKey::RSA.new(2048)
     cert = OpenSSL::X509::Certificate.new
     cert.version = 2
     cert.serial = 2
@@ -219,5 +229,10 @@ module HttpClientSpec
     cert.add_extension(ef.create_extension('subjectKeyIdentifier', 'hash', false))
     cert.sign(root_key, OpenSSL::Digest::SHA256.new)
     [cert, key]
+  end
+
+  def self.log_file(name)
+    FileUtils.mkdir_p(HttpClientSpec::SERVER_LOG_DIR)
+    File.open(File.join(HttpClientSpec::SERVER_LOG_DIR, name), 'a')
   end
 end

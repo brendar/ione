@@ -92,7 +92,7 @@ module Ione
       # @param options [Hash] only used to inject behaviour during tests
       def initialize(options={})
         @options = options
-        @clock = options[:clock] || MonotonicClock
+        @clock = options[:clock] || Time
         @state = PENDING_STATE
         @error_listeners = []
         @unblocker = Unblocker.new
@@ -464,7 +464,7 @@ module Ione
     class IoLoopBody
       def initialize(unblocker, options={})
         @selector = options[:selector] || IO
-        @clock = options[:clock] || MonotonicClock
+        @clock = options[:clock] || Time
         @timeout = options[:tick_resolution] || 1
         @drain_timeout = options[:drain_timeout] || 5
         @lock = Mutex.new
@@ -540,7 +540,7 @@ module Ione
     # @private
     class Scheduler
       def initialize(options={})
-        @clock = options[:clock] || MonotonicClock
+        @clock = options[:clock] || Time
         @lock = Mutex.new
         @timer_queue = Heap.new
         @pending_timers = {}
@@ -613,13 +613,6 @@ module Ione
 
       def to_s
         %(#<#{self.class.name} @timers=[#{@pending_timers.values.map(&:to_s).join(', ')}]>)
-      end
-    end
-
-    # @private
-    module MonotonicClock
-      def self.now
-        Process.clock_gettime(Process::CLOCK_MONOTONIC)
       end
     end
   end

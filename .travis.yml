@@ -17,7 +17,7 @@ rvm:
   - jruby-head
   - rbx-2
 jdk:
-  - openjdk11
+  - openjdk8
 matrix:
   allow_failures:
     - rvm: rbx-2
